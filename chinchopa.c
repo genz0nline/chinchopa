@@ -111,6 +111,7 @@ typedef struct response {
     int headers_len;
 
     char *body;
+    int content_length;
 } response;
 
 #define REQUEST_LINE    0
@@ -131,7 +132,23 @@ request *init_request() {
     return req;
 }
 
+response *init_response() {
+    response *resp = malloc(sizeof(response));
 
+    resp->major_version = 1;
+    resp->minor_version = 1;
+
+    resp->reason_phrase = NULL;
+
+    resp->headers = (header *)malloc(4 * sizeof(header));
+    resp->headers_len = 0;
+    resp->headers_capacity = 4;
+
+    resp->body = NULL;
+    resp->content_length = 0;
+
+    return resp;
+}
 
 struct method {
     char *s;
@@ -343,15 +360,9 @@ request *parse_request(int client) {
     return req;
 }
 
-response *form_response(request *req) {
-    if (req == NULL) {
-        // TODO: Bad request 400
-    }
-    return NULL;
-}
-
 void free_response(response *resp) {
     if (resp == NULL) return;
+
     free(resp->reason_phrase);
     for (int i = 0; i < resp->headers_len; i++) {
         header *h = resp->headers + i;
@@ -363,8 +374,99 @@ void free_response(response *resp) {
     free(resp);
 }
 
+// Only support HTTP1.x
+int supported_version(request *req) {
+    if (req->major_version != 1) return 0;
+
+    if (req->minor_version > 1) return 0;
+
+    return 1;
+}
+
+response *form_response(request *req) {
+    response *resp = init_response();
+
+    char *reason_phrase;
+
+    if (req == NULL) {
+        resp->status = 400;
+        reason_phrase = "Bad Request";
+        resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
+        memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
+        return resp;
+    }
+
+    if (!supported_version(req)) {
+        resp->status = 505;
+        reason_phrase = "HTTP version not supported";
+        resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
+        memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
+        return resp;
+    }
+
+    if (req->method != GET) {
+        resp->status = 405;
+        reason_phrase = "Method Not Allowed";
+        resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
+        memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
+        return resp;
+    }
+
+    resp->status = 200;
+    reason_phrase = "Ok";
+    resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
+    memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
+
+    
+
+    return resp;
+}
+
+#define PROTO_LEN           8
+#define STATUS_CODE_LEN     3
+
 int serialize_response(response *resp, char **serialized) {
-    return 0;
+
+    int status_line_len = PROTO_LEN // HTTP-Version
+                        + 1 // SP
+                        + STATUS_CODE_LEN // status-code
+                        + 1 // SP
+                        + strlen(resp->reason_phrase) // reason-phrase
+                        + 2 // CRLF
+                        + 2; // CRLF
+
+    char *buf = malloc(status_line_len * 2);
+
+    char *p = buf;
+
+    char proto[PROTO_LEN + 1];
+    sprintf(proto, "HTTP/%d.%d", resp->major_version, resp->minor_version);
+    memcpy(p, proto, PROTO_LEN);
+    p += PROTO_LEN;
+
+    memcpy(p, " ", 1);
+    p++;
+
+    char status[STATUS_CODE_LEN + 1];
+    sprintf(status, "%d", resp->status);
+    memcpy(p, status, STATUS_CODE_LEN);
+    p += STATUS_CODE_LEN;
+
+    memcpy(p, " ", 1);
+    p++;
+
+    memcpy(p, resp->reason_phrase, strlen(resp->reason_phrase));
+    p += strlen(resp->reason_phrase);
+
+    memcpy(p, "\r\n", 2);
+    p += 2;
+
+    memcpy(p, "\r\n", 2);
+    p += 2;
+
+    *serialized = buf;
+
+    return p - buf;
 }
 
 int respond(int client, char *resp, size_t len) {
@@ -373,24 +475,20 @@ int respond(int client, char *resp, size_t len) {
 }
 
 void print_request(request *req) {
-    printf("=== Request Line Parsed ===\n");
-    printf("method: ");
+    printf("=== Request ===\n");
     for (int i = 0; i < METHODS_NUM; i++) {
-        if (req->method == methods[i].method) printf("%s\n", methods[i].s);
+        if (req->method == methods[i].method) printf("%s ", methods[i].s);
     }
 
-    printf("uri: \"%s\"\n", req->uri);
-    printf("Major version: %d\n", req->major_version);
-    printf("Minor version: %d\n", req->minor_version);
-
-    printf("=== Headers Parsed ===\n");
+    printf("%s ", req->uri);
+    printf("HTTP/%d.%d\n", req->major_version, req->minor_version);
 
     for (int i = 0; i < req->headers_len; i++) {
         printf("%s: %s\n", req->headers[i].name, req->headers[i].value);
     }
+    printf("\n");
 
     if (req->body) {
-        printf("=== Body ===\n");
         for (int i = 0; i < req->content_length; i++) {
             printf("%c", req->body[i]);
         }
@@ -398,22 +496,32 @@ void print_request(request *req) {
     }
 }
 
+void print_response(char *serialized_response, size_t len) {
+    printf("=== Response ===\n");
+    for (int i = 0; i < len; i++) {
+        printf("%c", serialized_response[i]);
+    }
+    printf("\n");
+}
+
 void handle_request(int client) {
     request *req = parse_request(client);
     print_request(req);
 
-    // response *resp = form_response(req);
+    response *resp = form_response(req);
     free_request(req);
 
-    // char *serialized_response;
-    // size_t serialized_response_len = serialize_response(resp, &serialized_response);
-    // free_response(resp);
-    //
-    // if (respond(client, serialized_response, serialized_response_len)) {
-    //     free(serialized_response);
-    //     die("write");
-    // }
-    // free(serialized_response);
+    char *serialized_response = NULL;
+    size_t serialized_response_len = serialize_response(resp, &serialized_response);
+    print_response(serialized_response, serialized_response_len);
+    free_response(resp);
+
+    if (respond(client, serialized_response, serialized_response_len)) {
+        free(serialized_response);
+        die("write");
+    }
+
+    free(serialized_response);
 }
 
 void server_exit() {
