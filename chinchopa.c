@@ -417,7 +417,17 @@ response *form_response(request *req) {
     resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
     memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
 
-    
+    char *html = "<html><head><title>Server demo</title></head><body>Hello, http server!</body></html>";
+    resp->body = malloc(strlen(html));
+    memcpy(resp->body, html, strlen(html));
+    resp->content_length = strlen(html);
+
+    char *name = "Content-Length";
+    resp->headers[0].name = malloc(strlen(name) + 1);
+    memcpy(resp->headers[0].name, name, strlen(name) + 1);
+    resp->headers[0].value = malloc(3);
+    sprintf(resp->headers[0].value, "%d", (int) strlen(html));
+    resp->headers_len++;
 
     return resp;
 }
@@ -433,7 +443,16 @@ int serialize_response(response *resp, char **serialized) {
                         + 1 // SP
                         + strlen(resp->reason_phrase) // reason-phrase
                         + 2 // CRLF
-                        + 2; // CRLF
+                        + 2 // CRLF
+                        + resp->content_length; // body
+    
+    for (int i = 0; i < resp->headers_len; i++) {
+        header h = resp->headers[i];
+        status_line_len += strlen(h.name)
+                         + 2 // ": "
+                         + strlen(h.value)
+                         + 2; // CRLF
+    }
 
     char *buf = malloc(status_line_len * 2);
 
@@ -461,8 +480,28 @@ int serialize_response(response *resp, char **serialized) {
     memcpy(p, "\r\n", 2);
     p += 2;
 
+    for (int i = 0; i < resp->headers_len; i++) {
+        header h = resp->headers[i];
+        memcpy(p, h.name, strlen(h.name));
+        p += strlen(h.name);
+
+        memcpy(p, ": ", 2);
+        p += 2;
+
+        memcpy(p, h.value, strlen(h.value));
+        p += strlen(h.value);
+
+        memcpy(p, "\r\n", 2);
+        p += 2;
+    }
+
     memcpy(p, "\r\n", 2);
     p += 2;
+
+    if (resp->content_length > 0) {
+        memcpy(p, resp->body, resp->content_length);
+        p += resp->content_length;
+    }
 
     *serialized = buf;
 
