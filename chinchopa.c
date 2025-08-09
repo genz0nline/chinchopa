@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <errno.h>
 #include <unistd.h>
@@ -38,7 +39,11 @@ void server_start();
 void die(char *s);
 void die_msg(char *s);
 
+int get_file_path(char *uri, char **file_path);
+
 int main(int argc, char *argv[]) {
+
+    setbuf(stdout, NULL);
 
     state_init();
 
@@ -363,7 +368,6 @@ request *parse_request(int client) {
 void free_response(response *resp) {
     if (resp == NULL) return;
 
-    free(resp->reason_phrase);
     for (int i = 0; i < resp->headers_len; i++) {
         header *h = resp->headers + i;
         free(h->name);
@@ -383,6 +387,184 @@ int supported_version(request *req) {
     return 1;
 }
 
+struct reason {
+    int status;
+    char *reason_phrase;
+};
+
+struct reason reasons[] = {
+    {200, "Ok"},
+    {400, "Bad Request"},
+    {404, "Not Found"},
+    {405, "Method Not Allowed"},
+    {500, "Server Error"},
+    {505, "HTTP Version Not Supported"},
+    {-1, "Unknown"},
+};
+
+char *get_reason_phrase(int status) {
+    int i = 0;
+    while (1) {
+        if (status == reasons[i].status) {
+            return reasons[i].reason_phrase;
+        }
+        if (reasons[i].status == -1) {
+            return NULL;
+        }
+        i--;
+    }
+}
+
+int validate_uri(char *uri) {
+    if (uri == NULL)
+        return 1;
+
+    char *copy = malloc(strlen(uri) + 1);
+    memcpy(copy, uri, strlen(uri) + 1);
+
+    int level = 0;
+
+    if (*copy++ != '/')
+        return 1;
+
+    char *p;
+    int end = 0;
+    for (p = copy; p < copy + strlen(copy) + 1; p++) {
+        if (*p == '/' || *p == '\0') {
+            if (*p == '\0') {
+                end = 1;
+            }
+            *p = '\0';
+            if (strcmp(copy, "..") == 0) {
+                level--;
+            } else if (strcmp(copy, ".") == 0) {
+                continue;
+            } else {
+                level ++;
+            }
+
+            if (level < 0) {
+                return 1;
+            }
+            if (!end) {
+                copy = p + 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+void append(char **to, char* from) {
+    int to_len = strlen(*to);
+    int from_len = strlen(from);
+
+    *to = realloc(*to, to_len + from_len + 1);
+    memcpy(*to + to_len, from, from_len);
+    (*to)[to_len + from_len] = '\0';
+}
+
+int get_file_path(char *uri, char **file_path) {
+    *file_path = malloc(strlen(S.root) + strlen(uri) + 1);
+    sprintf(*file_path, "%s%s", S.root, uri);
+    (*file_path)[strlen(S.root) + strlen(uri)] = '\0';
+
+    struct stat path_stat;
+    if (stat(*file_path, &path_stat)) {
+        return 1;
+    }
+
+    if (S_ISREG(path_stat.st_mode)) {
+        return 0;
+    } else if (S_ISDIR(path_stat.st_mode)) {
+        if ((*file_path)[strlen(*file_path) - 1] != '/') {
+            append(file_path, "/");
+        }
+
+        append(file_path, "index.html");
+    } else {
+        return 1;
+    }
+
+    if (stat(*file_path, &path_stat)) {
+        return 1;
+    }
+
+    if (S_ISREG(path_stat.st_mode)) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int add_header(response *resp, char *name, char *str_value, int num_value) {
+    if (resp->headers_len == resp->headers_capacity) {
+        resp->headers_capacity *= 2;
+        resp->headers = realloc(resp->headers, sizeof(header) * resp->headers_capacity);
+        if (!resp->headers){
+            return 1;
+        }
+    }
+
+    header new_header;
+    new_header.name = malloc(strlen(name) + 1);
+    memcpy(new_header.name, name, strlen(name) + 1);
+
+    if (str_value) {
+        new_header.value = malloc(strlen(str_value) + 1);
+        memcpy(new_header.value, str_value, strlen(str_value) + 1);
+    } else {
+        new_header.value = malloc(64);
+        snprintf(new_header.value, 64, "%d", num_value);
+    }
+
+    resp->headers[resp->headers_len++] = new_header;
+
+    return 0;
+}
+
+int set_response_content(response *resp, char *file_path) {
+    FILE *f = fopen(file_path, "rb");
+    if (!f) {
+        return 1;
+    }
+
+    int capacity = 128;
+    resp->body = malloc(capacity);
+    if (!resp->body) {
+        fclose(f);
+        return 1;
+    }
+
+    resp->content_length = 0;
+
+    char c;
+    while (fread(&c, 1, 1, f) > 0) {
+        if (resp->content_length == capacity) {
+            capacity *= 2;
+            resp->body = realloc(resp->body, capacity);
+            if (!resp->body) {
+                fclose(f);
+                return 1;
+            }
+        }
+
+        resp->body[resp->content_length++] = c;
+    }
+
+    add_header(resp, "Content-Length", NULL, resp->content_length);
+
+    return 0;
+}
+
+int set_close_header(response *resp) {
+    if (add_header(resp, "Connection", "close", 0)) {
+        return 1;
+    }
+
+    return 0;
+}
+
 response *form_response(request *req) {
     response *resp = init_response();
 
@@ -390,44 +572,45 @@ response *form_response(request *req) {
 
     if (req == NULL) {
         resp->status = 400;
-        reason_phrase = "Bad Request";
-        resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
-        memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
+        resp->reason_phrase = get_reason_phrase(resp->status);
         return resp;
     }
 
     if (!supported_version(req)) {
         resp->status = 505;
-        reason_phrase = "HTTP version not supported";
-        resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
-        memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
+        resp->reason_phrase = get_reason_phrase(resp->status);
         return resp;
     }
 
     if (req->method != GET) {
         resp->status = 405;
-        reason_phrase = "Method Not Allowed";
-        resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
-        memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
+        resp->reason_phrase = get_reason_phrase(resp->status);
         return resp;
     }
 
+    if (validate_uri(req->uri)) {
+        resp->status = 404;
+        resp->reason_phrase = get_reason_phrase(resp->status);
+    }
+
+    char *file_path;
+    if (get_file_path(req->uri, &file_path)) {
+        resp->status = 404;
+        resp->reason_phrase = get_reason_phrase(resp->status);
+    }
+
+    if (set_response_content(resp, file_path)) {
+        resp->status = 500;
+        resp->reason_phrase = get_reason_phrase(resp->status);
+    }
+
+    if (set_close_header(resp)) {
+        resp->status = 500;
+        resp->reason_phrase = get_reason_phrase(resp->status);
+    }
+
     resp->status = 200;
-    reason_phrase = "Ok";
-    resp->reason_phrase = malloc(strlen(reason_phrase) + 1);
-    memcpy(resp->reason_phrase, reason_phrase, strlen(reason_phrase) + 1);
-
-    char *html = "<html><head><title>Server demo</title></head><body>Hello, http server!</body></html>";
-    resp->body = malloc(strlen(html));
-    memcpy(resp->body, html, strlen(html));
-    resp->content_length = strlen(html);
-
-    char *name = "Content-Length";
-    resp->headers[0].name = malloc(strlen(name) + 1);
-    memcpy(resp->headers[0].name, name, strlen(name) + 1);
-    resp->headers[0].value = malloc(3);
-    sprintf(resp->headers[0].value, "%d", (int) strlen(html));
-    resp->headers_len++;
+    resp->reason_phrase = get_reason_phrase(resp->status);
 
     return resp;
 }
@@ -535,10 +718,12 @@ void print_request(request *req) {
     }
 }
 
-void print_response(char *serialized_response, size_t len) {
+void print_response(response *resp) {
     printf("=== Response ===\n");
-    for (int i = 0; i < len; i++) {
-        printf("%c", serialized_response[i]);
+    printf("%d HTTP/%d.%d", resp->status, resp->major_version, resp->minor_version);
+
+    for (int i = 0; i < resp->headers_len; i++) {
+        printf("%s: %s\n", resp->headers[i].name, resp->headers[i].value);
     }
     printf("\n");
 }
@@ -548,11 +733,11 @@ void handle_request(int client) {
     print_request(req);
 
     response *resp = form_response(req);
+    print_response(resp);
     free_request(req);
 
     char *serialized_response = NULL;
     size_t serialized_response_len = serialize_response(resp, &serialized_response);
-    print_response(serialized_response, serialized_response_len);
     free_response(resp);
 
     if (respond(client, serialized_response, serialized_response_len)) {
@@ -635,6 +820,7 @@ int parse_args(int argc, char *argv[]) {
                         S.arg_flags |= ARGS_FLG_DIR;
                         if (i + 1 >= argc) return 1;
                         S.root = argv[i+1];
+                        printf("S.root = %s\n", S.root);
                         break;
                     case 'p':
                         S.arg_flags |= ARGS_FLG_PORT;
