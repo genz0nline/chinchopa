@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "server.h"
+#include "utils/err.h"
 #include "utils/opt.h"
 
 typedef struct server {
@@ -14,6 +15,7 @@ server_t *server_init(int argc, char *argv[]) {
 
     server->options = options_init(argc, argv);
     if (!server->options) {
+        perr("options_init");
         free(server);
         return NULL;
     }
@@ -28,7 +30,7 @@ int server_run(server_t *server) {
     }
 
     if (server->options->help) {
-        printf("Usage: chinchopa [-h] [-d] [-u] [--help] [--dir] [--user]\n");
+        printf("Usage: chinchopa [-h] [-d path] [-u username] [--help] [--dir path] [--user username]\n");
         return 0;
     }
 

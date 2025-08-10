@@ -1,7 +1,7 @@
 all: chinchopa
 
 CC=gcc
-SRC= src/chinchopa.c src/server.c src/utils/opt.c
+SRC= src/chinchopa.c src/server.c src/utils/opt.c src/utils/err.c
 
 chinchopa: $(SRC)
 	$(CC) -o chinchopa $(SRC) -s -lm

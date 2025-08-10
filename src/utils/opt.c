@@ -1,4 +1,5 @@
 #include "opt.h"
+#include "err.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -17,6 +18,7 @@ options_t *options_init(int argc, char *argv[]) {
         if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--dir") == 0) {
             if (i + 1 == argc) {
                 free(opts);
+                seterr(INCUS);
                 return NULL;
             }
             strncpy(opts->dir, argv[i+1], MAX_DIR_LEN);
@@ -25,6 +27,7 @@ options_t *options_init(int argc, char *argv[]) {
         if (strcmp(argv[i], "-u") == 0 || strcmp(argv[i], "--user") == 0) {
             if (i + 1 == argc) {
                 free(opts);
+                seterr(INCUS);
                 return NULL;
             }
             strncpy(opts->username, argv[i+1], MAX_USERNAME_LEN);
