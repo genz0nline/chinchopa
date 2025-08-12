@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "net.h"
+#include "../utils/log.h"
 #include "../utils/opt.h"
 #include "../utils/err.h"
 
@@ -55,8 +56,20 @@ int accept_connection(network_t *network) {
     return accept(network->srv, NULL, NULL);
 }
 
-int respond(int client, uint8_t *bytes, size_t len) {
+int respond(int client, char *bytes, size_t len) {
+    size_t total_written = 0;
 
+    while (total_written < len) {
+        int written = write(client, bytes + total_written, len - total_written);
+
+        if (written < 0) {
+            return 1;
+        }
+
+        total_written += written;
+    }
+
+    return 0;
 }
 
 void network_destroy(network_t *network) {

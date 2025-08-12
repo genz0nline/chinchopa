@@ -18,10 +18,10 @@ struct method {
     char *method_s;
 };
 
-typedef struct header {
+typedef struct req_header {
     int name_pos;
     int value_pos;
-} header_t;
+} req_header_t;
 
 typedef struct request {
     char *bytes;
@@ -33,7 +33,7 @@ typedef struct request {
     int major_version;
     int minor_version;
 
-    header_t *headers;
+    req_header_t *headers;
     size_t h_len;
     size_t h_size;
 

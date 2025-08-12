@@ -126,7 +126,7 @@ int parse_request_line(parser_t *parser) {
 }
 
 int parse_header_fields(parser_t *parser) { 
-    header_t new_header;
+    req_header_t new_header;
 
 
     char *line = parser->request->bytes + parser->read_idx;
@@ -159,7 +159,7 @@ int parse_header_fields(parser_t *parser) {
 
     if (parser->request->h_len == parser->request->h_size) {
         parser->request->h_size = parser->request->h_size * 2 + 1;
-        header_t *new_headers = (header_t *)realloc(parser->request->headers, sizeof(header_t) * parser->request->h_size);
+        req_header_t *new_headers = (req_header_t *)realloc(parser->request->headers, sizeof(req_header_t) * parser->request->h_size);
         if (!new_headers) {
             return 1;
         }
