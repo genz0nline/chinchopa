@@ -28,7 +28,7 @@ void log_printf(char *fmt, ...) {
     char time[DATE_LEN + 1];
     get_current_time(time);
 
-    fprintf(stderr, "[%s]: ", time);
+    fprintf(stderr, "\n[%s]: ", time);
     vfprintf(stderr, fmt, ap);
 
     va_end(ap);

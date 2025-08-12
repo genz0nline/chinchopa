@@ -12,9 +12,20 @@ char *strerr(int errnum) {
         return strerror(errno);
     } else {
         switch (errno) {
-            // My custom errno values
             case INCUS:
                 return "Incorrect usage, try: chinchopa --help";
+            case INPORT:
+                return "Invalid port value, port has to be between 1 and 65535";
+            case REQCAP:
+                return "Request exceeds allowed limit";
+            case INVREQ:
+                return "Invalid HTTP request\n";
+            case UNKNOWN_METHOD:
+                return "Unknown method\n";
+            case INVVER:
+                return "Invalid protocol version\n";
+            case INVHEADER:
+                return "Invalid header\n";
             default:
                 return "Unknown error";
         }
