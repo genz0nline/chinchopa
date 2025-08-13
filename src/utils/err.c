@@ -26,6 +26,8 @@ char *strerr(int errnum) {
                 return "Invalid protocol version\n";
             case INVHEADER:
                 return "Invalid header\n";
+            case INVURI:
+                return "Invalid uri\n";
             default:
                 return "Unknown error";
         }

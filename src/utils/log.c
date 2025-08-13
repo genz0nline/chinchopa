@@ -33,3 +33,7 @@ void log_printf(char *fmt, ...) {
 
     va_end(ap);
 }
+
+void log_div() {
+    fprintf(stderr, "\n----------------------------------------");
+}

@@ -8,6 +8,7 @@ typedef enum errors {
     UNKNOWN_METHOD = -5,
     INVVER = -6,
     INVHEADER = -7,
+    INVURI = -8,
 } errors_t;
 
 void seterr(errors_t err);

@@ -43,6 +43,11 @@ options_t *options_init(int argc, char *argv[]) {
                 return NULL;
             }
             strncpy(opts->dir, argv[i+1], MAX_DIR_LEN);
+
+            // No trailing slash in dir
+            if (opts->dir[strlen(opts->dir) - 1] == '/') {
+                opts->dir[strlen(opts->dir) - 1] = '\0';
+            }
         }
 
         if (strcmp(argv[i], "-u") == 0 || strcmp(argv[i], "--user") == 0) {

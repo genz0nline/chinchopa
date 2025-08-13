@@ -33,6 +33,7 @@ parser_t *parser_init(request_t *request) {
 }
 
 void print_parsed_request(request_t *request) {
+    log_div();
     log_printf("=== Parsed Request ===");
     for (int i = 0; i < METHODS_NUM; i++) {
         if (request->method == methods[i].method) {
@@ -52,6 +53,8 @@ void print_parsed_request(request_t *request) {
     if (request->content_length > 0) {
         log_printf("%s", request->bytes + request->body_pos);
     }
+
+    log_div();
 }
 
 void parser_destroy(parser_t *parser) {
@@ -203,7 +206,6 @@ int parse_header(parser_t *parser) {
 }
 
 int parse_body(parser_t *parser) {
-    log_printf("In parse body\n");
     if (strlen(parser->request->bytes + parser->request->body_pos) < parser->request->content_length) {
         return 0;
     }
