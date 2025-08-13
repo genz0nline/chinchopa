@@ -3,7 +3,6 @@
 #include "http/req.h"
 #include "http/resp.h"
 #include "sys/net.h"
-#include "utils/log.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,7 +15,7 @@ int handle_connection(int client, options_t *options) {
         return 1;
     }
 
-    print_parsed_request(request);
+    log_parsed_request(request);
 
     response_t *response = form_response(options, request);
     request_destroy(request);

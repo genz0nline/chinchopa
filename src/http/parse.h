@@ -16,6 +16,6 @@ typedef struct parser {
 } parser_t;
 
 parser_t *parser_init(request_t *request);
-void print_parsed_request(request_t *request);
+void log_parsed_request(request_t *request);
 int parse_chunk(parser_t *parser);
 void parser_destroy(parser_t *parser);

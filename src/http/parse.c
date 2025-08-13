@@ -32,7 +32,7 @@ parser_t *parser_init(request_t *request) {
     return parser;
 }
 
-void print_parsed_request(request_t *request) {
+void log_parsed_request(request_t *request) {
     log_div();
     log_printf("=== Parsed Request ===");
     for (int i = 0; i < METHODS_NUM; i++) {
