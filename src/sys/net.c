@@ -6,7 +6,6 @@
 #include <unistd.h>
 
 #include "net.h"
-#include "../utils/log.h"
 #include "../utils/opt.h"
 #include "../utils/err.h"
 
