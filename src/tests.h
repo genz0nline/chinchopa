@@ -2,5 +2,8 @@
 
 typedef struct test {
     char *nm;
-    void (*f) (void *);
+    int (*f) (void *);
 } test_t;
+
+void print_passed();
+void print_failed();

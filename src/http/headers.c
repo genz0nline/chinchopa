@@ -1,6 +1,5 @@
 #include "headers.h"
 #include "../utils/utils.h"
-#include "../utils/log.h"
 
 #include "req.h"
 #include "resp.h"
@@ -15,16 +14,13 @@ int process_content_length_header(req_header_t *header, request_t *request) {
 int process_headers_semantics(request_t *request) {
     for (int i = 0; i < request->h_len; i++) {
         req_header_t *header = request->headers + i;
-
         if (strcicmp(request->bytes + header->name_pos, "Content-Length") == 0) {
             if (process_content_length_header(header, request)) {
                 return 1;
             }
         }
-        /* In future more strcicmp my appear here */
-
+        /* In future more strcicmp may appear here */
     }
-
     return 0;
 }
 
