@@ -8,7 +8,7 @@ chinchopa: $(SRC)
 	$(CC) -o chinchopa src/chinchopa.c $(SRC) -g -lm
 
 tests: $(SRC_TST)
-	$(CC) -o tests $(SRC_TST) -g -lm
+	$(CC) -o tests $(SRC_TST) -g -lm -lcunit
 
 clean:
 	rm -f chinchopa tests *.o *.d

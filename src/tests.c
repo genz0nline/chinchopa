@@ -1,50 +1,33 @@
+#include <CUnit/Basic.h>
+#include <CUnit/TestDB.h>
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <CUnit/CUnit.h>
 
-#include "tests.h"
 #include "http/tests/route_tests.h"
 #include "http/tests/headers_tests.h"
 
-test_t tests[] = {
-    {"validate_uri_test", validate_uri_test},
-    {"add_resp_header_test", add_resp_header_test},
-    {NULL, NULL}
-};
-
-void print_passed() {
-    fprintf(stderr, "\t\033[32mPassed\033[m\n");
-}
-
-void print_failed() {
-    fprintf(stderr, "\t\033[31mFailed\033[m\n");
-}
-
 int main(void) {
-    test_t *tst;
-    int counter = 0;
-    int success = 0;
-
-    int total_tests = 0;
-    while (tests[total_tests++].f != NULL);
-    total_tests--;
-
-    int failed;
-    for (tst = tests; tst->f != NULL; tst++) {
-
-        fprintf(stderr, "Running test %d: %s...\n", counter + 1, tst->nm);
-        failed = tst->f(NULL);
-        if (failed) {
-            print_failed();
-        } else {
-            print_passed();
-        }
-        success += failed ? 0 : 1;
-        counter++;
+    if (CU_initialize_registry() != CUE_SUCCESS) {
+        fprintf(stderr, "Couldn't initialize CU\n");
     }
 
-    fprintf(stderr, "Passed tests: %d/%d\n", success, total_tests);
+    CU_pSuite validate_uri_suite = CU_add_suite("validate_uri_suite",
+                                   init_validate_uri_suite,
+                                   clean_validate_uri_suite);
+
+    CU_ADD_TEST(validate_uri_suite, validate_uri_test1);
+    CU_ADD_TEST(validate_uri_suite, validate_uri_test2);
+    CU_ADD_TEST(validate_uri_suite, validate_uri_test3);
+
+    CU_pSuite add_resp_header_suite = CU_add_suite("add_resp_header_suite", NULL, NULL);
+
+    CU_ADD_TEST(add_resp_header_suite, add_resp_header_test);
+
+    CU_basic_run_tests();
+
+    CU_cleanup_registry();
 
     return 0;
-
 }

@@ -1,44 +1,37 @@
+#include "route_tests.h"
 #include "../req.h"
 #include "../route.h"
-#include "../../tests.h"
+#include <CUnit/CUnit.h>
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 
-int validate_uri_test(void *p) {
-    char *cases[] = {
-        "/",
-        "/index.html",
-        "/../index.html",
-        NULL,
-    };
+request_t *test_request;
 
-    int results[] = {
-        0,
-        0,
-        1,
-        0,
-    };
-
-    request_t *request = (request_t *)malloc(sizeof(request_t));
-
-    int failed = 0;
-
-    for (int i = 0; cases[i] != NULL; i++) {
-        fprintf(stderr, "\t\tCase %d, uri = \"%s\": ", i + 1, cases[i]);
-        request->bytes = cases[i];
-        request->uri_pos = 0;
-
-        if ((validate_uri(request) != results[i])) {
-            failed = 1;
-        }
-        if (failed) {
-            print_failed();
-        } else {
-            print_passed();
-        }
+int init_validate_uri_suite(void) {
+    test_request = (request_t *)malloc(sizeof(request_t));
+    if (!test_request) {
+        return 1;
     }
 
-    free(request);
-    return failed;
+    return 0;
+}
+
+int clean_validate_uri_suite(void) {
+    free(test_request);
+    return 0;
+}
+
+void validate_uri_test1(void) {
+    test_request->bytes = "/";
+    CU_ASSERT(validate_uri(test_request) == 0);
+}
+
+void validate_uri_test2(void) {
+    test_request->bytes = "/index.html";
+    CU_ASSERT(validate_uri(test_request) == 0);
+}
+
+void validate_uri_test3(void) {
+    test_request->bytes = "/../index.html";
+    CU_ASSERT(validate_uri(test_request) == 1);
 }
