@@ -12,6 +12,8 @@ options_t *options_init(int argc, char *argv[]) {
     opts->h_port = 80;
     opts->dir[0] = '\0';
     opts->username[0] = '\0';
+    opts->ssl_cert[0] = '\0';
+    opts->ssl_key[0] = '\0';
 
     for (int i = 1; i < argc; i += 2) {
         
@@ -42,7 +44,7 @@ options_t *options_init(int argc, char *argv[]) {
                 seterr(INCUS);
                 return NULL;
             }
-            strncpy(opts->dir, argv[i+1], MAX_DIR_LEN);
+            strncpy(opts->dir, argv[i+1], MAX_PATH_LEN);
 
             // No trailing slash in dir
             if (opts->dir[strlen(opts->dir) - 1] == '/') {
@@ -58,6 +60,30 @@ options_t *options_init(int argc, char *argv[]) {
             }
             strncpy(opts->username, argv[i+1], MAX_USERNAME_LEN);
         }
+
+        if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--ssl_cert") == 0) {
+            if (i + 1 == argc) {
+                free(opts);
+                seterr(INCUS);
+                return NULL;
+            }
+            strncpy(opts->ssl_cert, argv[i+1], MAX_PATH_LEN);
+        }
+
+        if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--ssl_key") == 0) {
+            if (i + 1 == argc) {
+                free(opts);
+                seterr(INCUS);
+                return NULL;
+            }
+            strncpy(opts->ssl_key, argv[i+1], MAX_PATH_LEN);
+        }
+    }
+
+    if (strlen(opts->ssl_key) > 0 && strlen(opts->ssl_cert) > 0) {
+        opts->use_ssl = 1;
+    } else {
+        opts->use_ssl = 0;
     }
 
     return opts;

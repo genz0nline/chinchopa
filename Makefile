@@ -5,10 +5,10 @@ SRC=src/server.c src/utils/opt.c src/utils/err.c src/utils/log.c src/sys/net.c s
 SRC_TST= ${SRC} src/tests.c src/http/tests/route_tests.c src/http/tests/headers_tests.c
 
 chinchopa: $(SRC)
-	$(CC) -o chinchopa src/chinchopa.c $(SRC) -g -lm
+	$(CC) -o chinchopa src/chinchopa.c $(SRC) -g -lm -lssl -lcrypto
 
 tests: $(SRC_TST)
-	$(CC) -o tests $(SRC_TST) -g -lm -lcunit
+	$(CC) -o tests $(SRC_TST) -g -lm -lcunit -lssl -lcrypto
 
 clean:
 	rm -f chinchopa tests *.o *.d

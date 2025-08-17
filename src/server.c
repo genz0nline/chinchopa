@@ -8,7 +8,6 @@
 #include "server.h"
 #include "handler.h"
 #include "sys/net.h"
-#include "sys/io.h"
 #include "utils/err.h"
 #include "utils/opt.h"
 #include "utils/log.h"
@@ -36,11 +35,15 @@ server_t *server_init(int argc, char *argv[]) {
                "\t\t\t    help: %d\n"
                "\t\t\t     dir: %s\n"
                "\t\t\tusername: %s\n"
-               "\t\t\t    port: %d\n",
+               "\t\t\t    port: %d\n"
+               "\t\t\tssl_cert: %s\n"
+               "\t\t\t ssl_key: %s\n",
                server->options->help,
                server->options->dir,
                server->options->username,
-               server->options->h_port
+               server->options->h_port,
+               server->options->ssl_cert,
+               server->options->ssl_key
                );
 
 
@@ -55,11 +58,6 @@ server_t *server_init(int argc, char *argv[]) {
     }
 
     return server;
-}
-
-void *server_accept_connections(server_t *server) {
-
-    return NULL;
 }
 
 static volatile sig_atomic_t stop = 0;
@@ -87,12 +85,12 @@ int server_run(server_t *server) {
     sigaction(SIGTERM, &sa, NULL);
 
     while (!stop) {
-        io_t *io = accept_connection(server->network);
-        if (!io) {
+        conn_t *conn = accept_connection(server->network);
+        if (!conn) {
             continue;
         }
 
-        if (handle_connection(io, server->options)) {
+        if (handle_connection(conn, server->options)) {
             continue;
         }
     }

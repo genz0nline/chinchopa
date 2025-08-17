@@ -1,6 +1,6 @@
 #pragma once
 
 typedef struct options options_t;
-typedef struct io io_t;
+typedef struct conn conn_t;
 
-int handle_connection(io_t *io, options_t *options);
+int handle_connection(conn_t *conn, options_t *options);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/types.h>
+#include <openssl/ssl.h>
 
 typedef struct io {
     void *ctx;
