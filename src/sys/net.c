@@ -1,11 +1,13 @@
 #include <asm-generic/socket.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/io.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 
 #include "net.h"
+#include "io.h"
 #include "../utils/opt.h"
 #include "../utils/err.h"
 
@@ -51,15 +53,35 @@ network_t *network_init(options_t *options) {
     return network;
 }
 
-int accept_connection(network_t *network) {
-    return accept(network->srv, NULL, NULL);
+
+ssize_t fd_read(void *ctx, void *buf, size_t nbytes) {
+    return read(*(int *)ctx, buf, nbytes);
 }
 
-int respond(int client, char *bytes, size_t len) {
+ssize_t fd_write(void *ctx, const void *buf, size_t nbytes) {
+    return write(*(int *)ctx, buf, nbytes);
+}
+
+io_t *accept_conncetion_no_tls(network_t *network) {
+    io_t *io = io_init();
+
+    *(int *)(io->ctx) = accept(network->srv, NULL, NULL);
+    io->read=fd_read;
+    io->write=fd_write;
+    io->shutdown = NULL;
+
+    return io;
+}
+
+io_t *accept_connection(network_t *network) {
+    return accept_conncetion_no_tls(network);
+}
+
+int respond(io_t *io, char *bytes, size_t len) {
     size_t total_written = 0;
 
     while (total_written < len) {
-        int written = write(client, bytes + total_written, len - total_written);
+        int written = io->write(io->ctx, bytes + total_written, len - total_written);
 
         if (written < 0) {
             return 1;

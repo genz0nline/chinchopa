@@ -1,12 +1,14 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/io.h>
 #include <unistd.h>
 #include <pthread.h>
 
 #include "server.h"
 #include "handler.h"
 #include "sys/net.h"
+#include "sys/io.h"
 #include "utils/err.h"
 #include "utils/opt.h"
 #include "utils/log.h"
@@ -85,12 +87,12 @@ int server_run(server_t *server) {
     sigaction(SIGTERM, &sa, NULL);
 
     while (!stop) {
-        int client = accept_connection(server->network);
-        if (client < 0) {
+        io_t *io = accept_connection(server->network);
+        if (!io) {
             continue;
         }
 
-        if (handle_connection(client, server->options)) {
+        if (handle_connection(io, server->options)) {
             continue;
         }
     }

@@ -41,5 +41,7 @@ typedef struct request {
     int content_length;
 } request_t;
 
-request_t *get_request(int client);
+typedef struct io io_t;
+
+request_t *get_request(io_t *io);
 void request_destroy(request_t *request);

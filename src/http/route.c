@@ -66,8 +66,6 @@ char *get_file_path(options_t *options, request_t *request) {
 
     struct stat st;
 
-    log_printf("Path 1: %s\n", path);
-
     if (stat(path, &st)) {
         free(path);
         return NULL;

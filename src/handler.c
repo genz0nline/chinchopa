@@ -5,13 +5,19 @@
 #include "sys/net.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <unistd.h>
+#include "sys/io.h"
 
-int handle_connection(int client, options_t *options) {
+int handle_connection(io_t *io, options_t *options) {
     int failed;
 
-    request_t *request = get_request(client);
+    request_t *request = get_request(io);
     if (!request) {
+        if (io->shutdown)
+            io->shutdown(io->ctx);
+        close(*(int *)io->ctx);
+        io_destroy(io);
         return 1;
     }
 
@@ -20,6 +26,10 @@ int handle_connection(int client, options_t *options) {
     response_t *response = form_response(options, request);
     request_destroy(request);
     if (!response) {
+        if (io->shutdown)
+            io->shutdown(io->ctx);
+        close(*(int *)io->ctx);
+        io_destroy(io);
         return 1;
     }
 
@@ -29,12 +39,20 @@ int handle_connection(int client, options_t *options) {
     response_destroy(response);
     if (failed) {
         free(bytes);
+        if (io->shutdown)
+            io->shutdown(io->ctx);
+        close(*(int *)io->ctx);
+        io_destroy(io);
         return 1;
     }
 
-    failed = respond(client, bytes, bytes_len);
+    failed = respond(io, bytes, bytes_len);
     free(bytes);
-    close(client);
+    if (io->shutdown)
+        io->shutdown(io->ctx);
+    close(*(int *)io->ctx);
+
+    io_destroy(io);
 
     return failed;
 }

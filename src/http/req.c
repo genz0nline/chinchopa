@@ -6,13 +6,14 @@
 
 #include "req.h"
 #include "../utils/err.h"
+#include "../sys/io.h"
 #include "parse.h"
 
 #define START_BUF_SIZE      256
 #define CHUNK_SIZE          128 
 #define REQUEST_SIZE_CAP    (16 * 1024 * 1024)
 
-request_t *get_request(int client) {
+request_t *get_request(io_t *io) {
     request_t *request = (request_t *)malloc(sizeof(request_t));
     if (!request) 
         return NULL;
@@ -29,7 +30,7 @@ request_t *get_request(int client) {
     int len = 0;
 
     int read_bytes;
-    while ((read_bytes = read(client, request->bytes + len, CHUNK_SIZE)) > 0) {
+    while ((read_bytes = io->read(io->ctx, request->bytes + len, CHUNK_SIZE)) > 0) {
         len += read_bytes;
         request->bytes[len] = '\0';
 
