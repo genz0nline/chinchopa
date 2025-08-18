@@ -31,6 +31,22 @@ server_t *server_init(int argc, char *argv[]) {
         return NULL;
     }
 
+
+    if (server->options->help) {
+        server->network = NULL;
+        return server;
+    }
+
+    server->network = network_init(server->options);
+    if (!server->network) {
+        perr("network_init");
+
+        options_destroy(server->options);
+        free(server);
+
+        return NULL;
+    }
+
     log_printf("Server initialized with the following options:\n"
                "\t\t\t    help: %d\n"
                "\t\t\t     dir: %s\n"
@@ -46,16 +62,6 @@ server_t *server_init(int argc, char *argv[]) {
                server->options->ssl_key
                );
 
-
-    server->network = network_init(server->options);
-    if (!server->network) {
-        perr("network_init");
-
-        options_destroy(server->options);
-        free(server);
-
-        return NULL;
-    }
 
     return server;
 }
@@ -73,7 +79,7 @@ int server_run(server_t *server) {
     }
 
     if (server->options->help) {
-        printf("Usage: chinchopa [-h] [-d path] [-u username] [--help] [--dir path] [--user username]\n");
+        printf("Usage: chinchopa [-h] [-d path] [-u username] [--help] [--dir path] [--user username] [--ssl_cert path/to/cert] [--ssl_key path/to/key]\n");
         return 0;
     }
 

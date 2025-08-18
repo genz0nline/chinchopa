@@ -2,7 +2,6 @@
 #include "resp.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../utils/log.h"
 
 #define TEMPLATE    "<html><head><title>%d %s</title></head><body>" \
                     "<h1 style=\"width: fit-content; margin-right: auto; margin-left: auto\">%d %s</h1>" \
