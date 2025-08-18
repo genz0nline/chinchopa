@@ -1,6 +1,9 @@
 chinchopa
 *localhost*
 
+ssl.sh
+no_ssl.sh
+
 # Prerequisites
 *.d
 
