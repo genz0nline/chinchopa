@@ -5,12 +5,15 @@
 
 #include "../utils/opt.h"
 #include "../utils/log.h"
+#include "../utils/err.h"
 #include "../sys/dsk.h"
 #include "headers.h"
 #include "req.h"
 #include "resp.h"
 #include "route.h"
 #include "status.h"
+#include "tmpl.h"
+
 
 int validate_version(request_t *request) {
     if (request->major_version != 1)
@@ -29,6 +32,13 @@ response_t *finalize_response(response_t *response) {
     if (set_reason_phrase(response)) {
         response_destroy(response);
         return NULL;
+    }
+
+    if (template_available(response->status)) {
+        if (set_html_template_body(response)) {
+            response_destroy(response);
+            return NULL;
+        }
     }
 
     if (set_content_length_header(response)) {

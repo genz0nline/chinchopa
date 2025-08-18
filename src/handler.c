@@ -60,14 +60,8 @@ int handle_connection(conn_t *conn, options_t *options) {
 
     if (conn->io->shutdown) {
         conn->io->shutdown(conn->io->ctx);
-        log_printf("Shutdown happened\n");
     }
-
     close(conn->cliend_fd);
-    log_printf("close happened\n");
-
     io_destroy(conn->io);
-    log_printf("io_destroy happened\n");
-
     return failed;
 }
